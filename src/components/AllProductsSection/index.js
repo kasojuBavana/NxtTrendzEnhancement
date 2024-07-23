@@ -92,10 +92,10 @@ class AllProductsSection extends Component {
     })
     const jwtToken = Cookies.get('jwt_token')
     const {
-      activeOptionId,
-      activeCategoryId,
-      searchInput,
-      activeRatingId,
+      activeOptionId, 
+     activeCategoryId, 
+     searchInput, 
+     activeRatingId
     } = this.state
     const apiUrl = `https://apis.ccbp.in/products?sort_by=${activeOptionId}&category=${activeCategoryId}&title_search=${searchInput}&rating=${activeRatingId}`
     const options = {

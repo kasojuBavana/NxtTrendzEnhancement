@@ -1,8 +1,8 @@
-import Header from '../Header'
-import CartListView from '../CartListView'
-
 import CartContext from '../../context/CartContext'
+
+import Header from '../Header'
 import EmptyCartView from '../EmptyCartView'
+import CartListView from '../CartListView'
 import CartSummary from '../CartSummary'
 
 import './index.css'
@@ -42,4 +42,5 @@ const Cart = () => (
     }}
   </CartContext.Consumer>
 )
+
 export default Cart

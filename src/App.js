@@ -17,8 +17,7 @@ class App extends Component {
     cartList: [],
   }
 
-  //   TODO: Add your code for remove all cart items, increment cart item quantity, decrement cart item quantity, remove cart item
-  removeAllCartItem = () => {
+  removeAllCartItems = () => {
     this.setState({cartList: []})
   }
 
@@ -34,7 +33,7 @@ class App extends Component {
     }))
   }
 
-  decrementCartItemQunatity = id => {
+  decrementCartItemQuantity = id => {
     const {cartList} = this.state
     const productObject = cartList.find(eachCartItem => eachCartItem.id === id)
     if (productObject.quantity > 1) {
@@ -54,10 +53,11 @@ class App extends Component {
 
   removeCartItem = id => {
     const {cartList} = this.state
-    const updatedCardList = cartList.filter(
+    const updatedCartList = cartList.filter(
       eachCartItem => eachCartItem.id !== id,
     )
-    this.setState({cartList: updatedCardList})
+
+    this.setState({cartList: updatedCartList})
   }
 
   addCartItem = product => {
@@ -65,6 +65,7 @@ class App extends Component {
     const productObject = cartList.find(
       eachCartItem => eachCartItem.id === product.id,
     )
+
     if (productObject) {
       this.setState(prevState => ({
         cartList: prevState.cartList.map(eachCartItem => {
@@ -73,13 +74,14 @@ class App extends Component {
 
             return {...eachCartItem, quantity: updatedQuantity}
           }
+
           return eachCartItem
         }),
       }))
     } else {
-      const updatedCardList = [...cartList, product]
+      const updatedCartList = [...cartList, product]
 
-      this.setState({cartList: updatedCardList})
+      this.setState({cartList: updatedCartList})
     }
   }
 
@@ -93,7 +95,7 @@ class App extends Component {
           addCartItem: this.addCartItem,
           removeCartItem: this.removeCartItem,
           incrementCartItemQuantity: this.incrementCartItemQuantity,
-          decrementCartItemQunatity: this.decrementCartItemQunatity,
+          decrementCartItemQuantity: this.decrementCartItemQuantity,
           removeAllCartItems: this.removeAllCartItems,
         }}
       >

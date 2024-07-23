@@ -1,69 +1,15 @@
 import {Component} from 'react'
-import Loader from 'react-loader-spinner'
+import {Link} from 'react-router-dom'
 import Cookies from 'js-cookie'
+import Loader from 'react-loader-spinner'
+import {BsPlusSquare, BsDashSquare} from 'react-icons/bs'
 
-import FiltersGroup from '../FiltersGroup'
-import ProductCard from '../ProductCard'
-import ProductsHeader from '../ProductsHeader'
+import CartContext from '../../context/CartContext'
+
+import Header from '../Header'
+import SimilarProductItem from '../SimilarProductItem'
 
 import './index.css'
-
-const categoryOptions = [
-  {
-    name: 'Clothing',
-    categoryId: '1',
-  },
-  {
-    name: 'Electronics',
-    categoryId: '2',
-  },
-  {
-    name: 'Appliances',
-    categoryId: '3',
-  },
-  {
-    name: 'Grocery',
-    categoryId: '4',
-  },
-  {
-    name: 'Toys',
-    categoryId: '5',
-  },
-]
-
-const sortbyOptions = [
-  {
-    optionId: 'PRICE_HIGH',
-    displayText: 'Price (High-Low)',
-  },
-  {
-    optionId: 'PRICE_LOW',
-    displayText: 'Price (Low-High)',
-  },
-]
-
-const ratingsList = [
-  {
-    ratingId: '4',
-    imageUrl:
-      'https://assets.ccbp.in/frontend/react-js/rating-four-stars-img.png',
-  },
-  {
-    ratingId: '3',
-    imageUrl:
-      'https://assets.ccbp.in/frontend/react-js/rating-three-stars-img.png',
-  },
-  {
-    ratingId: '2',
-    imageUrl:
-      'https://assets.ccbp.in/frontend/react-js/rating-two-stars-img.png',
-  },
-  {
-    ratingId: '1',
-    imageUrl:
-      'https://assets.ccbp.in/frontend/react-js/rating-one-star-img.png',
-  },
-]
 
 const apiStatusConstants = {
   initial: 'INITIAL',
@@ -72,32 +18,40 @@ const apiStatusConstants = {
   inProgress: 'IN_PROGRESS',
 }
 
-class AllProductsSection extends Component {
+class ProductItemDetails extends Component {
   state = {
-    productsList: [],
+    productData: {},
+    similarProductsData: [],
     apiStatus: apiStatusConstants.initial,
-    activeOptionId: sortbyOptions[0].optionId,
-    activeCategoryId: '',
-    searchInput: '',
-    activeRatingId: '',
+    quantity: 1,
   }
 
   componentDidMount() {
-    this.getProducts()
+    this.getProductData()
   }
 
-  getProducts = async () => {
+  getFormattedData = data => ({
+    availability: data.availability,
+    brand: data.brand,
+    description: data.description,
+    id: data.id,
+    imageUrl: data.image_url,
+    price: data.price,
+    rating: data.rating,
+    title: data.title,
+    totalReviews: data.total_reviews,
+  })
+
+  getProductData = async () => {
+    const {match} = this.props
+    const {params} = match
+    const {id} = params
+
     this.setState({
       apiStatus: apiStatusConstants.inProgress,
     })
     const jwtToken = Cookies.get('jwt_token')
-    const {
-      activeOptionId,
-      activeCategoryId,
-      searchInput,
-      activeRatingId,
-    } = this.state
-    const apiUrl = `https://apis.ccbp.in/products?sort_by=${activeOptionId}&category=${activeCategoryId}&title_search=${searchInput}&rating=${activeRatingId}`
+    const apiUrl = `https://apis.ccbp.in/products/${id}`
     const options = {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
@@ -107,19 +61,17 @@ class AllProductsSection extends Component {
     const response = await fetch(apiUrl, options)
     if (response.ok) {
       const fetchedData = await response.json()
-      const updatedData = fetchedData.products.map(product => ({
-        title: product.title,
-        brand: product.brand,
-        price: product.price,
-        id: product.id,
-        imageUrl: product.image_url,
-        rating: product.rating,
-      }))
+      const updatedData = this.getFormattedData(fetchedData)
+      const updatedSimilarProductsData = fetchedData.similar_products.map(
+        eachSimilarProduct => this.getFormattedData(eachSimilarProduct),
+      )
       this.setState({
-        productsList: updatedData,
+        productData: updatedData,
+        similarProductsData: updatedSimilarProductsData,
         apiStatus: apiStatusConstants.success,
       })
-    } else {
+    }
+    if (response.status === 404) {
       this.setState({
         apiStatus: apiStatusConstants.failure,
       })
@@ -127,69 +79,134 @@ class AllProductsSection extends Component {
   }
 
   renderLoadingView = () => (
-    <div className="products-loader-container">
+    <div className="products-details-loader-container" data-testid="loader">
       <Loader type="ThreeDots" color="#0b69ff" height="50" width="50" />
     </div>
   )
 
   renderFailureView = () => (
-    <div className="products-error-view-container">
+    <div className="product-details-error-view-container">
       <img
-        src="https://assets.ccbp.in/frontend/react-js/nxt-trendz/nxt-trendz-products-error-view.png"
-        alt="all-products-error"
-        className="products-failure-img"
+        alt="error view"
+        src="https://assets.ccbp.in/frontend/react-js/nxt-trendz-error-view-img.png"
+        className="error-view-image"
       />
-      <h1 className="product-failure-heading-text">
-        Oops! Something Went Wrong
-      </h1>
-      <p className="products-failure-description">
-        We are having some trouble processing your request. Please try again.
-      </p>
+      <h1 className="product-not-found-heading">Product Not Found</h1>
+      <Link to="/products">
+        <button type="button" className="button">
+          Continue Shopping
+        </button>
+      </Link>
     </div>
   )
 
-  changeSortby = activeOptionId => {
-    this.setState({activeOptionId}, this.getProducts)
+  onDecrementQuantity = () => {
+    const {quantity} = this.state
+    if (quantity > 1) {
+      this.setState(prevState => ({quantity: prevState.quantity - 1}))
+    }
   }
 
-  renderProductsListView = () => {
-    const {productsList, activeOptionId} = this.state
-    const shouldShowProductsList = productsList.length > 0
-
-    return shouldShowProductsList ? (
-      <div className="all-products-container">
-        <ProductsHeader
-          activeOptionId={activeOptionId}
-          sortbyOptions={sortbyOptions}
-          changeSortby={this.changeSortby}
-        />
-        <ul className="products-list">
-          {productsList.map(product => (
-            <ProductCard productData={product} key={product.id} />
-          ))}
-        </ul>
-      </div>
-    ) : (
-      <div className="no-products-view">
-        <img
-          src="https://assets.ccbp.in/frontend/react-js/nxt-trendz/nxt-trendz-no-products-view.png"
-          className="no-products-img"
-          alt="no products"
-        />
-        <h1 className="no-products-heading">No Products Found</h1>
-        <p className="no-products-description">
-          We could not find any products. Try other filters.
-        </p>
-      </div>
-    )
+  onIncrementQuantity = () => {
+    this.setState(prevState => ({quantity: prevState.quantity + 1}))
   }
 
-  renderAllProducts = () => {
+  renderProductDetailsView = () => (
+    <CartContext.Consumer>
+      {value => {
+        const {productData, quantity, similarProductsData} = this.state
+        const {
+          availability,
+          brand,
+          description,
+          imageUrl,
+          price,
+          rating,
+          title,
+          totalReviews,
+        } = productData
+        const {addCartItem} = value
+        const onClickAddToCart = () => {
+          addCartItem({...productData, quantity})
+        }
+
+        return (
+          <div className="product-details-success-view">
+            <div className="product-details-container">
+              <img src={imageUrl} alt="product" className="product-image" />
+              <div className="product">
+                <h1 className="product-name">{title}</h1>
+                <p className="price-details">Rs {price}/-</p>
+                <div className="rating-and-reviews-count">
+                  <div className="rating-container">
+                    <p className="rating">{rating}</p>
+                    <img
+                      src="https://assets.ccbp.in/frontend/react-js/star-img.png"
+                      alt="star"
+                      className="star"
+                    />
+                  </div>
+                  <p className="reviews-count">{totalReviews} Reviews</p>
+                </div>
+                <p className="product-description">{description}</p>
+                <div className="label-value-container">
+                  <p className="label">Available:</p>
+                  <p className="value">{availability}</p>
+                </div>
+                <div className="label-value-container">
+                  <p className="label">Brand:</p>
+                  <p className="value">{brand}</p>
+                </div>
+                <hr className="horizontal-line" />
+                <div className="quantity-container">
+                  <button
+                    type="button"
+                    className="quantity-controller-button"
+                    onClick={this.onDecrementQuantity}
+                    data-testid="minus"
+                  >
+                    <BsDashSquare className="quantity-controller-icon" /> -
+                  </button>
+                  <p className="quantity">{quantity}</p>
+                  <button
+                    type="button"
+                    className="quantity-controller-button"
+                    onClick={this.onIncrementQuantity}
+                    data-testid="plus"
+                  >
+                    <BsPlusSquare className="quantity-controller-icon" /> +
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="button add-to-cart-btn"
+                  onClick={onClickAddToCart}
+                >
+                  ADD TO CART
+                </button>
+              </div>
+            </div>
+            <h1 className="similar-products-heading">Similar Products</h1>
+            <ul className="similar-products-list">
+              {similarProductsData.map(eachSimilarProduct => (
+                <SimilarProductItem
+                  productDetails={eachSimilarProduct}
+                  key={eachSimilarProduct.id}
+                />
+              ))}
+            </ul>
+          </div>
+        )
+      }}
+    </CartContext.Consumer>
+  )
+
+  renderProductDetails = () => {
     const {apiStatus} = this.state
 
     switch (apiStatus) {
       case apiStatusConstants.success:
-        return this.renderProductsListView()
+        return this.renderProductDetailsView()
       case apiStatusConstants.failure:
         return this.renderFailureView()
       case apiStatusConstants.inProgress:
@@ -199,54 +216,16 @@ class AllProductsSection extends Component {
     }
   }
 
-  clearFilters = () => {
-    this.setState(
-      {
-        searchInput: '',
-        activeCategoryId: '',
-        activeRatingId: '',
-      },
-      this.getProducts,
-    )
-  }
-
-  changeRating = activeRatingId => {
-    this.setState({activeRatingId}, this.getProducts)
-  }
-
-  changeCategory = activeCategoryId => {
-    this.setState({activeCategoryId}, this.getProducts)
-  }
-
-  enterSearchInput = () => {
-    this.getProducts()
-  }
-
-  changeSearchInput = searchInput => {
-    this.setState({searchInput})
-  }
-
   render() {
-    const {activeCategoryId, searchInput, activeRatingId} = this.state
-
     return (
-      <div className="all-products-section">
-        <FiltersGroup
-          searchInput={searchInput}
-          categoryOptions={categoryOptions}
-          ratingsList={ratingsList}
-          changeSearchInput={this.changeSearchInput}
-          enterSearchInput={this.enterSearchInput}
-          activeCategoryId={activeCategoryId}
-          activeRatingId={activeRatingId}
-          changeCategory={this.changeCategory}
-          changeRating={this.changeRating}
-          clearFilters={this.clearFilters}
-        />
-        {this.renderAllProducts()}
-      </div>
+      <>
+        <Header />
+        <div className="product-item-details-container">
+          {this.renderProductDetails()}
+        </div>
+      </>
     )
   }
 }
 
-export default AllProductsSection
+export default ProductItemDetails
